@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="google-site-verification" content="wcZyvkhDHfMrbIZfw8LS742mBdQ8bn9HhJwAYgQHI2k" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>QR & Tools App - Final</title>
+<meta name="description" content="QR Code Generator & High-Traffic Tools with Share + Download">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="https://unpkg.com/jsqr/dist/jsQR.js"></script>
+<style>
+body{margin:0;font-family:'Segoe UI',sans-serif;background:#f5f7fb;color:#000;}
+header{background:#0ea5e9;color:white;padding:20px;text-align:center;font-size:20px;position:relative;}
+.dark-toggle{position:absolute;top:20px;right:20px;cursor:pointer;font-size:20px;}
+.container{max-width:1000px;margin:auto;padding:15px;box-sizing:border-box;}
+.section-title{margin-top:20px;font-size:18px;font-weight:bold;color:#0ea5e9;border-bottom:2px solid #0ea5e9;padding-bottom:5px;}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:15px;margin-top:10px;}
+.card{background:white;border-radius:12px;padding:15px;text-align:center;box-shadow:0 4px 10px rgba(0,0,0,0.08);cursor:pointer;transition:0.3s;position:relative;}
+.card:hover{transform:scale(1.05);}
+.card-label{font-size:11px;color:#555;margin-bottom:5px;display:block;}
+.form{margin-top:20px;background:white;padding:15px;border-radius:12px;box-shadow:0 4px 10px rgba(0,0,0,0.08);}
+input,textarea{width:100%;padding:12px;margin:6px 0;border-radius:8px;border:1px solid #ddd;box-sizing:border-box;}
+button{width:100%;padding:12px;margin-top:8px;border:none;background:#0ea5e9;color:white;border-radius:8px;font-size:14px;cursor:pointer;box-sizing:border-box;}
+#qrcode{margin-top:20px;text-align:center;background:white;padding:15px;border-radius:10px;position:relative;display:inline-block;max-width:100%;}
+.tool-section{margin-top:30px;padding:15px;background:#eef2f7;border-radius:12px;box-shadow:0 2px 6px rgba(0,0,0,0.05);}
+.tool-section h3{margin:0 0 10px 0;color:#0ea5e9;}
+.tool-section h5{margin:0 0 5px 0;color:#333;}
+.tool-section input[type='file']{margin-bottom:8px;}
+.tool-section textarea{height:60px;}
+.tool-section button{margin-top:5px;}
+.tool-img-container{margin-top:10px;display:flex;flex-direction:column;gap:5px;}
+.tool-img-container img{width:150px;height:auto;cursor:pointer;border:1px solid #ccc;border-radius:8px;}
+.tool-img-container button{width:auto;padding:6px 12px;font-size:12px;margin-top:2px;margin-right:5px;}
+.dark{background:#111;color:#fff;}
+.dark .card,.dark .form,.dark #qrcode,.dark .tool-section{background:#222;color:#fff;}
+@media(max-width:768px){.grid{grid-template-columns:repeat(auto-fit,minmax(100px,1fr));}button{font-size:12px;padding:8px;}input,textarea{padding:10px;}}
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#333;color:#fff;padding:10px 20px;border-radius:8px;opacity:0;transition:0.5s;z-index:9999;}
+.toast.show{opacity:1;}
+</style>
+</head>
+<body>
+<header>📱 QR & Tools App <span class="dark-toggle" onclick="toggleDark()">🌙</span></header>
+<div class="container">
+
+<div class="section-title">Categories</div>
+<div class="grid">
+  <div class="card" onclick="showForm('text')"><span class="card-label">Text/URL QR</span>🔗<br>Text</div>
+  <div class="card" onclick="showForm('wifi')"><span class="card-label">WiFi QR</span>📶<br>WiFi</div>
+  <div class="card" onclick="showForm('whatsapp')"><span class="card-label">WhatsApp</span>💬<br>WhatsApp</div>
+  <div class="card" onclick="showForm('contact')"><span class="card-label">Contact QR</span>👤<br>Contact</div>
+  <div class="card" onclick="showForm('email')"><span class="card-label">Email QR</span>📧<br>Email</div>
+  <div class="card" onclick="showForm('phone')"><span class="card-label">Phone QR</span>📞<br>Phone</div>
+</div>
+
+<div class="form" id="formBox">
+<input id="data" placeholder="Enter text or URL">
+<div style="display:flex;gap:5px;margin-top:5px;">
+<input type="color" id="qrColor" value="#000000">
+<button id="applyColorBtn">Apply Color</button>
+</div>
+<button id="generateBtn">Generate QR</button>
+<div id="downloadShare" style="display:none;margin-top:10px;">
+<button onclick="downloadQR()">Download QR</button>
+<button onclick="shareQR()">Share QR with Link</button>
+<button onclick="copyQRText()">Copy Text</button>
+</div>
+</div>
+<div id="qrcode"></div>
+<div id="toast" class="toast"></div>
+
+<div class="tool-section">
+<h3>🔧 Scan-from-Image Tool</h3>
+<h5>Upload an image containing QR code</h5>
+<input type="file" id="scanImageInput" accept="image/*">
+<button onclick="scanFromImage()">Scan QR from Image</button>
+<div id="scanResult" class="tool-img-container"></div>
+</div>
+
+<script>
+function showToast(msg){let t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>{t.classList.remove('show');},2000);}
+function toggleDark(){document.body.classList.toggle('dark');}
+
+function showForm(type){
+let html="";
+if(type=="wifi"){html=`<input id="ssid" placeholder="WiFi Name"><input id="pass" placeholder="Password">`;}
+else if(type=="whatsapp"){html=`<input id="phone" placeholder="Phone">`;}
+else if(type=="contact"){html=`<input id="name" placeholder="Name"><input id="phone" placeholder="Phone"><input id="email" placeholder="Email">`;}
+else if(type=="email"){html=`<input id="email" placeholder="Email">`;}
+else if(type=="phone"){html=`<input id="phone" placeholder="Phone">`;}
+else{html=`<input id="data" placeholder="Enter text or URL">`;}
+document.getElementById("formBox").innerHTML=html+`<div style='display:flex;gap:5px;margin-top:5px;'><input type='color' id='qrColor' value='#000000'><button id='applyColorBtn'>Apply Color</button></div><button id='generateBtn'>Generate QR</button><div id='downloadShare' style='display:none;margin-top:10px;'><button onclick='downloadQR()'>Download QR</button><button onclick='shareQR()'>Share QR with Link</button><button onclick='copyQRText()'>Copy Text</button></div>`;
+document.getElementById('generateBtn').addEventListener('click',()=>generateQR(type));
+document.getElementById('applyColorBtn').addEventListener('click',applyColor);
+}
+
+function generateQR(type){
+let data="";
+if(type=="wifi"){data=`WIFI:T:WPA;S:${ssid.value};P:${pass.value};;`;}
+else if(type=="whatsapp"){data=`https://wa.me/${phone.value}`;}
+else if(type=="contact"){data=`BEGIN:VCARD\nN:${name.value}\nTEL:${phone.value}\nEMAIL:${email.value}\nEND:VCARD`;}
+else if(type=="email"){data=`mailto:${email.value}`;}
+else if(type=="phone"){data=`tel:${phone.value}`;}
+else{data=document.getElementById("data").value;}
+let qrBox=document.getElementById("qrcode");qrBox.innerHTML="";
+let color=document.getElementById("qrColor").value;
+new QRCode(qrBox,{text:data,width:250,height:250,colorDark:color,colorLight:"#ffffff",correctLevel:QRCode.CorrectLevel.H});
+document.getElementById('downloadShare').style.display='block';
+showToast('QR Generated');}
+
+function applyColor(){let canvas=document.querySelector('#qrcode canvas');if(canvas){showToast('Color Applied');}}
+
+function downloadQR(){let canvas=document.querySelector("#qrcode canvas");if(!canvas){alert("Generate first");return;}canvas.toBlob(function(blob){let link=document.createElement("a");link.href=URL.createObjectURL(blob);link.download="qr.png";link.click();});}
+
+function shareQR(){let canvas=document.querySelector("#qrcode canvas");if(!canvas){alert("Generate first");return;}let data=document.getElementById('data')?.value||'';canvas.toBlob(async function(blob){let file=new File([blob],"qr.png",{type:"image/png"});if(navigator.share){await navigator.share({files:[file],title:'QR Code',text:data});}else{alert('Share not supported');}});}
+
+function copyQRText(){let text=document.getElementById('data')?.value||'';navigator.clipboard.writeText(text);showToast('Text Copied');}
+
+// Scan tool
+function scanFromImage(){
+let fileInput=document.getElementById('scanImageInput');
+if(!fileInput.files[0]){alert('Select image first');return;}
+let reader=new FileReader();
+reader.onload=function(){
+let img=new Image();
+img.src=reader.result;
+img.onload=function(){
+let canvas=document.createElement('canvas');
+canvas.width=img.width; canvas.height=img.height;
+let ctx=canvas.getContext('2d');
+ctx.drawImage(img,0,0);
+let imageData=ctx.getImageData(0,0,canvas.width,canvas.height);
+let code=jsQR(imageData.data,imageData.width,imageData.height);
+let container=document.getElementById('scanResult');
+container.innerHTML='';
+if(code){
+let p=document.createElement('p');
+p.innerHTML=`Scanned QR: <a href='${code.data}' target='_blank'>${code.data}</a>`;
+let copyBtn=document.createElement('button');copyBtn.textContent='Copy';copyBtn.onclick=()=>{navigator.clipboard.writeText(code.data);showToast('Copied');};
+let downloadBtn=document.createElement('button');downloadBtn.textContent='Download Image';downloadBtn.onclick=()=>{let a=document.createElement('a');a.href=img.src;a.download='qr-image.png';a.click();};
+container.appendChild(p); container.appendChild(copyBtn); container.appendChild(downloadBtn);
+}else{container.textContent='No QR found in image.';}
+};};reader.readAsDataURL(fileInput.files[0]);}
+
+document.addEventListener('DOMContentLoaded',()=>{showForm('text');});
+</script>
+
+<!-- Ads: Social Bar + Popunder (Fixed Load) -->
+<script>
+window.addEventListener('load', function () {
+  var s = document.createElement('script');
+  s.src = "https://pl28696187.profitablecpmratenetwork.com/94/8a/6e/948a6e2365fdd166c798b4813b1ad36a.js";
+  s.async = true;
+  document.body.appendChild(s);
+
+  var p = document.createElement('script');
+  p.src = "https://pl28696358.profitablecpmratenetwork.com/df/3b/a7/df3ba77bfc723728c2a7904a8ebb653a.js";
+  p.async = true;
+  document.body.appendChild(p);
+});
+</script>
+
+</body>
+</html>
